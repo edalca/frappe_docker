@@ -1,7 +1,10 @@
+version: "3.8"
+
 services:
   mariadb:
     image: docker.io/mariadb:10.6
     platform: linux/amd64
+    container_name: mariadb
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -12,18 +15,27 @@ services:
       MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - mariadb-data:/var/lib/mysql
+    networks:
+      - internal
 
   redis-cache:
     image: docker.io/redis:alpine
     platform: linux/amd64
+    container_name: redis-cache
+    networks:
+      - internal
 
   redis-queue:
     image: docker.io/redis:alpine
     platform: linux/amd64
+    container_name: redis-queue
+    networks:
+      - internal
 
   frappe:
     image: docker.io/frappe/bench:latest
     platform: linux/amd64
+    container_name: frappe-stack
     working_dir: /workspace
     command: bash -c "
       bash ./entrypoint.sh devsite \
@@ -33,13 +45,29 @@ services:
       - SHELL=/bin/bash
     volumes:
       - .:/workspace:cached
-    ports:
-      - "8000:8000"
-      - "9000:9000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frappe.rule=Host(`frappe.${DOMAIN}`)"
+      - "traefik.http.routers.frappe.entrypoints=websecure"
+      - "traefik.http.routers.frappe.tls=true"
+      - "traefik.http.routers.frappe.tls.certresolver=le"
+      - "traefik.http.services.frappe.loadbalancer.server.port=8000"
     depends_on:
+      - mariadb
       - redis-cache
       - redis-queue
-      - mariadb
+    networks:
+      - traefik-network
+      - internal
+
+volumes:
+  mariadb-data:
+
+networks:
+  traefik-network:
+    external: true
+  internal:
+    driver: bridge
 
 volumes:
   mariadb-data:
