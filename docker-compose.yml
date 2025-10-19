@@ -47,7 +47,7 @@ services:
       - .:/workspace:cached
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frappe.rule=Host(`frappe.${DOMAIN}`)"
+      - "traefik.http.routers.frappe.rule=Host(`app.${DOMAIN}`)"
       - "traefik.http.routers.frappe.entrypoints=websecure"
       - "traefik.http.routers.frappe.tls=true"
       - "traefik.http.routers.frappe.tls.certresolver=le"
