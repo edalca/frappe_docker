@@ -1,0 +1,45 @@
+services:
+  mariadb:
+    image: docker.io/mariadb:10.6
+    platform: linux/amd64
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  redis-cache:
+    image: docker.io/redis:alpine
+    platform: linux/amd64
+
+  redis-queue:
+    image: docker.io/redis:alpine
+    platform: linux/amd64
+
+  frappe:
+    image: docker.io/frappe/bench:latest
+    platform: linux/amd64
+    working_dir: /workspace
+    command: bash -c "
+      bash ./entrypoint.sh devsite \
+        erpnext=https://github.com/edalca/erpnext.git \
+        hrms=https://github.com/edalca/hrms.git && sleep infinity"
+    environment:
+      - SHELL=/bin/bash
+    volumes:
+      - .:/workspace:cached
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    depends_on:
+      - redis-cache
+      - redis-queue
+      - mariadb
+
+volumes:
+  mariadb-data:
